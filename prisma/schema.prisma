@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ===============================
+// USUARIOS Y AUTENTICACIÓN
+// ===============================
+
+model users {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String   @unique @db.VarChar(255)
+  password   String   @db.VarChar(255)
+  role       Role     @default(STUDENT)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  student students?
+  teacher teachers?
+  parent  parents?
+  admin   admins?
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+// ===============================
+// ADMINISTRADORES
+// ===============================
+
+model admins {
+  id      String @id @default(uuid()) @db.Uuid
+  user_id String @unique @db.Uuid
+  name    String @db.VarChar(255)
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+// ===============================
+// ESTUDIANTES
+// ===============================
+
+model students {
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @unique @db.Uuid
+  name         String    @db.VarChar(255)
+  last_name    String    @db.VarChar(255)
+  birth_date   DateTime  @db.Date
+  gender       String    @db.VarChar(10)
+  address      String?   @db.Text
+  phone        String?   @db.VarChar(20)
+  qr_code      String    @unique @db.VarChar(255)
+  pin_code     String    @unique @db.VarChar(6) 
+  parent_id    String?   @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  user         users              @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  parent       parents?           @relation(fields: [parent_id], references: [id])
+  enrollments  enrollments[]
+  attendance   attendance[]
+  grades       grades[]
+}
+
+// ===============================
+// DOCENTES
+// ===============================
+
+model teachers {
+  id           String    @id @default(uuid()) @db.Uuid
+  user_id      String    @unique @db.Uuid
+  name         String    @db.VarChar(255)
+  last_name    String    @db.VarChar(255)
+  specialty    String?   @db.VarChar(255)
+  phone        String?   @db.VarChar(20)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  user         users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  courses      courses[]
+}
+
+// ===============================
+// PADRES
+// ===============================
+
+model parents {
+  id         String     @id @default(uuid()) @db.Uuid
+  user_id    String     @unique @db.Uuid
+  name       String     @db.VarChar(255)
+  last_name  String     @db.VarChar(255)
+  phone      String?    @db.VarChar(20)
+  created_at DateTime   @default(now()) @db.Timestamptz(6)
+
+  user       users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  students   students[]
+}
+
+// ===============================
+// CURSOS/MATERIAS
+// ===============================
+
+model courses {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @db.VarChar(255)
+  description String?   @db.Text
+  teacher_id  String    @db.Uuid
+  grade_level Int
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  teacher     teachers       @relation(fields: [teacher_id], references: [id])
+  schedules   schedules[]
+  enrollments enrollments[]
+  grades      grades[]
+  attendance  attendance[]
+}
+
+// ===============================
+// HORARIOS
+// ===============================
+
+model schedules {
+  id         String   @id @default(uuid()) @db.Uuid
+  course_id  String   @db.Uuid
+  day_week   String   @db.VarChar(20)
+  start_time String   @db.VarChar(10)
+  end_time   String   @db.VarChar(10)
+  classroom  String?  @db.VarChar(50)
+
+  course     courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+}
+
+// ===============================
+// INSCRIPCIONES (Estudiante-Curso)
+// ===============================
+
+model enrollments {
+  id           String   @id @default(uuid()) @db.Uuid
+  student_id   String   @db.Uuid
+  course_id    String   @db.Uuid
+  enrolled_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  student      students @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course       courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id])
+}
+
+// ===============================
+// ASISTENCIA
+// ===============================
+
+model attendance {
+  id          String         @id @default(uuid()) @db.Uuid
+  student_id  String         @db.Uuid
+  course_id   String         @db.Uuid
+  date        DateTime       @db.Date
+  status      AttendStatus   @default(PRESENT)
+  method      AttendMethod   @default(MANUAL)
+  created_at  DateTime       @default(now()) @db.Timestamptz(6)
+
+  student     students       @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course      courses        @relation(fields: [course_id], references: [id], onDelete: Cascade)
+
+  @@unique([student_id, course_id, date])
+}
+
+enum AttendStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
+}
+
+enum AttendMethod {
+  QR
+  PIN
+  MANUAL
+}
+
+// ===============================
+// CALIFICACIONES
+// ===============================
+
+model grades {
+  id         String   @id @default(uuid()) @db.Uuid
+  student_id String   @db.Uuid
+  course_id  String   @db.Uuid
+  grade      Decimal  @db.Decimal(5, 2)
+  period     String   @db.VarChar(50)
+  comment    String?  @db.Text
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  student    students @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  course     courses  @relation(fields: [course_id], references: [id], onDelete: Cascade)
+}
