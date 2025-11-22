@@ -29,12 +29,13 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://sistema-educativo-frontend.vercel.app",
+      "https://sistema-educativo-frontend-anghels-projects-79904a97.vercel.app",
       process.env.FRONTEND_URL,
     ].filter(Boolean),
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(metricsMiddleware);

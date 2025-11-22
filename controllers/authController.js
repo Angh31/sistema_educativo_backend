@@ -323,7 +323,7 @@ const getMe = async (req, res, next) => {
       id: user.id,
       email: user.email,
       role: user.role,
-      profile, // ✅ Ahora sí tiene "profile"
+      profile, 
     });
   } catch (error) {
     next(error);
