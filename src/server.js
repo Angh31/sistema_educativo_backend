@@ -77,3 +77,7 @@ app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
   console.log(`📊 Métricas disponibles en http://localhost:${PORT}/metrics`);
 });
+
+app.options("*", cors());
+
+app.use(express.json());
